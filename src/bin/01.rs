@@ -1,7 +1,5 @@
 advent_of_code::solution!(1);
 
-use regex::Regex;
-
 pub fn part_one(input: &str) -> Option<u32> {
     let lines = input.split('\n');
     let mut sum = 0;
@@ -9,60 +7,70 @@ pub fn part_one(input: &str) -> Option<u32> {
         let mut first_digit: Option<u32> = None;
         let mut last_digit: Option<u32> = None;
         for c in line.chars() {
-            match c.to_digit(10) {
-                Some(digit) => {
-                    if first_digit.is_none() {
-                        first_digit = Some(digit);
-                    }
-                    last_digit = Some(digit);
+            if let Some(digit) = c.to_digit(10) {
+                if first_digit.is_none() {
+                    first_digit = Some(digit);
                 }
-                None => (),
+                last_digit = Some(digit);
             };
         }
         sum += (10 * first_digit?) + last_digit?;
     }
-    return Some(sum);
-}
-
-pub fn part_two(input: &str) -> Option<u32> {
-    let re_forward =
-        Regex::new(r"((one)|(two)|(three)|(four)|(five)|(six)|(seven)|(eight)|(nine)|[1-9])")
-            .unwrap();
-    let re_reverse =
-        Regex::new(r"((eno)|(owt)|(eerht)|(ruof)|(evif)|(xis)|(neves)|(thgie)|(enin)|[1-9])")
-            .unwrap();
-    let lines = input.split('\n');
-    let mut sum = 0;
-    for line in lines {
-        let digits_foward: Vec<u32> = re_forward
-            .find_iter(line)
-            .map(|digit| as_numeric(digit.as_str()))
-            .collect();
-        let digits_reverse: Vec<u32> = re_reverse
-            .find_iter(&line.chars().rev().collect::<String>())
-            .map(|digit| as_numeric(digit.as_str()))
-            .collect();
-        sum += (10 * digits_foward.first()?) + digits_reverse.first()?;
-    }
     Some(sum)
 }
 
-fn as_numeric(input: &str) -> u32 {
-    match input.len() {
-        1 => input.chars().nth(0).unwrap().to_digit(10).unwrap(),
-        _ => match input {
-            "one" | "eno" => 1,
-            "two" | "owt" => 2,
-            "three" | "eerht" => 3,
-            "four" | "ruof" => 4,
-            "five" | "evif" => 5,
-            "six" | "xis" => 6,
-            "seven" | "neves" => 7,
-            "eight" | "thgie" => 8,
-            "nine" | "enin" => 9,
-            _ => panic!("Unknown digit"),
-        },
+const WORD_DIGITS: &'static [&str] = &[
+    "one", "two", "three", "four", "five", "six", "seven", "eight", "nine",
+];
+
+pub fn part_two(input: &str) -> Option<u32> {
+    let lines = input.split('\n');
+    let mut sum = 0;
+    let mut word: Vec<char> = Vec::with_capacity(100);
+    for line in lines {
+        let mut first_digit: Option<u32> = None;
+        let mut last_digit: Option<u32> = None;
+        'chars: for c in line.chars() {
+            match c.to_digit(10) {
+                Some(digit) => {
+                    first_digit = Some(digit);
+                    break;
+                }
+                None => word.push(c),
+            };
+            let potential_string = word.iter().rev().take(5).rev().collect::<String>();
+            for (idx, digit_word) in WORD_DIGITS.iter().enumerate() {
+                if potential_string.ends_with(digit_word) {
+                    first_digit = Some(idx as u32 + 1);
+                    break 'chars;
+                }
+            }
+        }
+        word.clear();
+
+        'chars_rev: for c in line.chars().rev() {
+            if last_digit.is_some() {
+                break;
+            }
+            match c.to_digit(10) {
+                Some(digit) => {
+                    last_digit = Some(digit);
+                    break;
+                }
+                None => word.push(c),
+            };
+            let potential_string = word.iter().rev().take(5).collect::<String>();
+            for (idx, digit_word) in WORD_DIGITS.iter().enumerate() {
+                if potential_string.starts_with(digit_word) {
+                    last_digit = Some(idx as u32 + 1);
+                    break 'chars_rev;
+                }
+            }
+        }
+        sum += (10 * first_digit?) + last_digit?;
+        word.clear();
     }
+    Some(sum)
 }
 
 #[cfg(test)]
@@ -85,7 +93,7 @@ mod tests {
 
     #[test]
     fn test_part_two_1() {
-        let result = part_two("6oneighthlf");
+        let result = part_two("5four6fb4four3twocn");
         assert_eq!(result, Some(68));
     }
 }
