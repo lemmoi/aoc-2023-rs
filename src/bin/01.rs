@@ -49,9 +49,6 @@ pub fn part_two(input: &str) -> Option<u32> {
         word.clear();
 
         'chars_rev: for c in line.chars().rev() {
-            if last_digit.is_some() {
-                break;
-            }
             match c.to_digit(10) {
                 Some(digit) => {
                     last_digit = Some(digit);
@@ -94,6 +91,6 @@ mod tests {
     #[test]
     fn test_part_two_1() {
         let result = part_two("5four6fb4four3twocn");
-        assert_eq!(result, Some(68));
+        assert_eq!(result, Some(52));
     }
 }
