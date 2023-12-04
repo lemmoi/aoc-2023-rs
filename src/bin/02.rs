@@ -24,7 +24,7 @@ where
         input
             .lines()
             .enumerate()
-            .map(|(game, line)| {
+            .filter_map(|(game, line)| {
                 let (_, data) = line.split_once(':').unwrap();
                 let rounds = data.split(';');
                 let mut r: u32 = 0;
@@ -44,7 +44,6 @@ where
                 }
                 f(game as u32, r, g, b)
             })
-            .flatten()
             .sum(),
     )
 }

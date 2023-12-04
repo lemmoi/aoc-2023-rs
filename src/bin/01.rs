@@ -19,7 +19,7 @@ pub fn part_one(input: &str) -> Option<u32> {
     Some(sum)
 }
 
-const WORD_DIGITS: &'static [&str] = &[
+const WORD_DIGITS: &[&str] = &[
     "one", "two", "three", "four", "five", "six", "seven", "eight", "nine",
 ];
 
