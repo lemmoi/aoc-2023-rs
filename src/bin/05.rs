@@ -7,7 +7,8 @@ use regex::Regex;
 
 pub fn part_one(input: &str) -> Option<u64> {
     let mut lines = input.lines();
-    let seeds: Vec<i64> = lines.next()
+    let seeds: Vec<i64> = lines
+        .next()
         .unwrap()
         .split_once(": ")
         .unwrap()
@@ -52,6 +53,7 @@ pub fn part_two(input: &str) -> Option<u64> {
     let mut lines = input.lines();
     let pairs_re = Regex::new(r"((\d+) (\d+))").unwrap();
     let mut seed_ranges: Vec<(i64, i64)> = Vec::new();
+    let mut sum: i64 = 0;
     pairs_re
         .captures_iter(lines.next().unwrap().split_once(": ").unwrap().1)
         .for_each(|capture| {
@@ -59,7 +61,9 @@ pub fn part_two(input: &str) -> Option<u64> {
             let start: i64 = start_str.unwrap().as_str().parse().unwrap();
             let range: i64 = range_str.unwrap().as_str().parse().unwrap();
             seed_ranges.push((start, range));
+            sum += range;
         });
+    println!("Sum: {}", sum);
     // this should stay constant throughout
     let total_seeds: i64 = seed_ranges.iter().map(|x| x.1).sum();
 
