@@ -11,7 +11,7 @@ const ORDER_2: &[char] = &[
     'A', 'K', 'Q', 'T', '9', '8', '7', '6', '5', '4', '3', '2', 'J',
 ];
 
-#[derive(Eq, PartialEq, PartialOrd)]
+#[derive(Eq, PartialEq)]
 struct Hand {
     hand_type: HandType,
     hand: Vec<char>,
@@ -37,6 +37,12 @@ impl Ord for Hand {
         } else {
             Ord::cmp(&self.hand_type, &other.hand_type)
         }
+    }
+}
+
+impl PartialOrd for Hand {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
     }
 }
 
