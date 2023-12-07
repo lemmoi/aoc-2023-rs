@@ -1,4 +1,10 @@
-use winnow::{IResult, combinator::{separated, alt, opt}, Parser, ascii::{digit1, space1}, PResult, token::{take_until1, take_till1, take_till, take_while}, stream::AsChar};
+use winnow::{
+    ascii::{digit1, space1},
+    combinator::separated,
+    stream::AsChar,
+    token::{take_till, take_while},
+    PResult, Parser,
+};
 
 advent_of_code::solution!(4);
 
@@ -16,7 +22,7 @@ pub fn part_one(input: &str) -> Option<u32> {
             winning_nums.retain(|item| my_nums.contains(item));
             let num_won = winning_nums.len();
             if num_won != 0 {
-                (1 << (num_won - 1)) * (num_won != 0) as u32
+                (1 << (num_won - 1)) as u32
             } else {
                 0
             }
@@ -34,7 +40,7 @@ pub fn part_two(input: &str) -> Option<u32> {
         let mut winning_nums = get_nums_vec(&mut line).unwrap();
         take_til_digit(&mut line).unwrap();
         let my_nums = get_nums_vec(&mut line).unwrap();
-        
+
         // At the size of these inputs, iterating over both vecs
         // is faster than building and intersecting std HashSet
         winning_nums.retain(|item| my_nums.contains(item));
@@ -57,11 +63,11 @@ pub fn part_two(input: &str) -> Option<u32> {
 
 fn take_til_digit<'s>(input: &mut &'s str) -> PResult<&'s str> {
     take_while(1.., |c| !AsChar::is_dec_digit(c)).parse_next(input)
-  }
+}
 
 fn get_nums_vec<'s>(input: &mut &'s str) -> PResult<Vec<u8>> {
     separated(1.., digit1.parse_to::<u8>(), space1).parse_next(input)
-  }
+}
 
 #[cfg(test)]
 mod tests {

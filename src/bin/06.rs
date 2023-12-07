@@ -28,7 +28,7 @@ pub fn part_one(input: &str) -> Option<u32> {
     Some(product)
 }
 
-pub fn part_two(input: &str) -> Option<u64> {
+pub fn part_two(input: &str) -> Option<u32> {
     let mut lines = input.lines();
     let re = Regex::new(r"((\d+\s+)+\d+)").unwrap();
     let time: u64 = re
@@ -59,7 +59,7 @@ pub fn part_two(input: &str) -> Option<u64> {
         .filter(|distance| *distance > record)
         .count();
 
-    Some(wins as u64)
+    Some(wins as u32)
 }
 
 #[cfg(test)]
