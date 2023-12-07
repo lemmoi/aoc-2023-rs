@@ -1,18 +1,25 @@
+use winnow::{IResult, combinator::{separated, alt, opt}, Parser, ascii::{digit1, space1}, PResult, token::{take_until1, take_till1, take_till, take_while}, stream::AsChar};
+
 advent_of_code::solution!(4);
 
 pub fn part_one(input: &str) -> Option<u32> {
     let sum: u32 = input
         .lines()
-        .map(|line| {
-            let (winning_nums_str, my_nums_str) =
-                line.split_once(':').unwrap().1.split_once('|').unwrap();
-            let mut winning_nums = get_nums_vec(winning_nums_str);
-            let my_nums = get_nums_vec(my_nums_str);
+        .map(|mut line| {
+            let _: PResult<&str> = take_till(1.., ':').parse_next(&mut line);
+            take_til_digit(&mut line).unwrap();
+            let mut winning_nums = get_nums_vec(&mut line).unwrap();
+            take_til_digit(&mut line).unwrap();
+            let my_nums = get_nums_vec(&mut line).unwrap();
             // At the size of these inputs, iterating over both vecs
             // is faster than building and intersecting std HashSet
             winning_nums.retain(|item| my_nums.contains(item));
             let num_won = winning_nums.len();
-            (1 << (num_won - 1)) * (num_won != 0) as u32
+            if num_won != 0 {
+                (1 << (num_won - 1)) * (num_won != 0) as u32
+            } else {
+                0
+            }
         })
         .sum();
 
@@ -21,11 +28,13 @@ pub fn part_one(input: &str) -> Option<u32> {
 
 pub fn part_two(input: &str) -> Option<u32> {
     let mut wins_per_game: Vec<u8> = Vec::new();
-    for line in input.lines() {
-        let (winning_nums_str, my_nums_str) =
-            line.split_once(':').unwrap().1.split_once('|').unwrap();
-        let mut winning_nums = get_nums_vec(winning_nums_str);
-        let my_nums = get_nums_vec(my_nums_str);
+    for mut line in input.lines() {
+        let _: PResult<&str> = take_till(1.., ':').parse_next(&mut line);
+        take_til_digit(&mut line).unwrap();
+        let mut winning_nums = get_nums_vec(&mut line).unwrap();
+        take_til_digit(&mut line).unwrap();
+        let my_nums = get_nums_vec(&mut line).unwrap();
+        
         // At the size of these inputs, iterating over both vecs
         // is faster than building and intersecting std HashSet
         winning_nums.retain(|item| my_nums.contains(item));
@@ -46,12 +55,13 @@ pub fn part_two(input: &str) -> Option<u32> {
     Some(num_games_by_idx.iter().sum())
 }
 
-fn get_nums_vec(input: &str) -> Vec<u8> {
-    input
-        .split(' ')
-        .filter_map(|num| num.trim().parse::<u8>().ok())
-        .collect()
-}
+fn take_til_digit<'s>(input: &mut &'s str) -> PResult<&'s str> {
+    take_while(1.., |c| !AsChar::is_dec_digit(c)).parse_next(input)
+  }
+
+fn get_nums_vec<'s>(input: &mut &'s str) -> PResult<Vec<u8>> {
+    separated(1.., digit1.parse_to::<u8>(), space1).parse_next(input)
+  }
 
 #[cfg(test)]
 mod tests {
