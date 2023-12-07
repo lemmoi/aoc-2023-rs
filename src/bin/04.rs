@@ -65,7 +65,7 @@ fn take_til_digit<'s>(input: &mut &'s str) -> PResult<&'s str> {
     take_while(1.., |c| !AsChar::is_dec_digit(c)).parse_next(input)
 }
 
-fn get_nums_vec<'s>(input: &mut &'s str) -> PResult<Vec<u8>> {
+fn get_nums_vec(input: &mut &str) -> PResult<Vec<u8>> {
     separated(1.., digit1.parse_to::<u8>(), space1).parse_next(input)
 }
 
