@@ -206,7 +206,9 @@ fn find_start(grid: &Grid) -> (usize, usize) {
     grid.iter()
         .enumerate()
         .find_map(|(row_idx, row)| {
-            row.iter().position(|c| *c == 'S').map(|col_idx| (row_idx, col_idx))
+            row.iter()
+                .position(|c| *c == 'S')
+                .map(|col_idx| (row_idx, col_idx))
         })
         .unwrap()
 }
