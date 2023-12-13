@@ -1,4 +1,4 @@
-use advent_of_code::template::aoc_cli::check;
+use std::{cmp, collections::HashMap};
 
 advent_of_code::solution!(12);
 
@@ -6,23 +6,29 @@ pub fn part_one(input: &str) -> Option<u32> {
     let mut sum = 0;
     for line in input.lines() {
         let (chars, spec_str) = line.split_once(' ').unwrap();
-        let mut springs: Vec<_> = chars.chars().map(|c| Spring::try_from(c).unwrap()).collect();
+        let springs: Vec<_> = chars.chars().map(|c| Spring::try_from(c).unwrap()).collect();
         let spec: Vec<_> = spec_str.split(',').map(|d| d.parse::<u8>().unwrap()).collect();
 
-        let line_count = get_count(&mut springs, &spec, 0);
-        println!("{}", line_count);
+        let line_count = get_count(&springs, &spec, &mut HashMap::new());
         sum += line_count;
         
     }
 
-    Some(sum)
+    Some(sum as u32)
 }
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
+#[repr(u8)]
 enum Spring {
-    Working,
-    Broken,
-    Unknown
+    Working = b'.',
+    Broken = b'#',
+    Unknown = b'?'
+}
+
+impl Into<char> for Spring {
+    fn into(self) -> char {
+        self as u8 as char
+    }
 }
 
 impl TryFrom<char> for Spring {
@@ -37,110 +43,93 @@ impl TryFrom<char> for Spring {
     }
 }
 
-fn get_count(springs: &mut Vec<Spring>, spec: &Vec<u8>, start: usize) -> u32 {
-    if start == springs.len() || !springs[start..springs.len()].contains(&Spring::Unknown) {
-        return if check_spec(springs, spec) {
-            1
-        } else {
-            0
-        }
-    };
 
-    let mut sum = 0;
-    for i in start..springs.len() {
-        if matches!(springs[i], Spring::Unknown) {
-            springs[i] = Spring::Working;
-            sum += get_count(springs, spec, i + 1);
-
-            springs[i] = Spring::Broken;
-            sum += get_count(springs, spec, i + 1);
-
-            springs[i] = Spring::Unknown;
-
-            break;
-        }
-    }
-
-    sum
+#[derive(Eq, PartialEq, Hash)]
+struct CacheKey {
+    springs: String,
+    spec: String
 }
 
+impl CacheKey {
+    fn new(springs: &[Spring], spec: &[u8]) -> Self { Self {
+        springs: springs.iter().map(|c| -> char {<Spring as Into<char>>::into(*c)}).collect(),
+        spec: spec.iter().map(|c| *c as char).collect() 
+    } }
+}
 
+fn memoize(springs: &[Spring], spec: &[u8], memo: &mut HashMap<CacheKey, u64>) -> u64 {
+    let key = CacheKey::new(springs, spec);
 
-fn check_spec(springs: &Vec<Spring>, spec: &Vec<u8>) -> bool {
-    let mut spec_idx = 0;
-    let mut in_chunk = false;
-    let mut chunk_len = 0;
-    for spring in springs {
-        match spring {
-            Spring::Broken => {
-                if in_chunk {
-                    chunk_len += 1;
-                } else {
-                    if spec.len() <= spec_idx {
-                        return false;
-                    }
-                    in_chunk = true;
-                    chunk_len = 1;
-                }
-            },
-            Spring::Working => {
-                if in_chunk {
-                    if spec[spec_idx] != chunk_len {
-                        return false;
-                    }
-                    in_chunk = false;
-                    chunk_len = 0;
-                    spec_idx += 1;
-                }
-            },
-            // only works for known
-            Spring::Unknown => return false,
-        }
-    }
-    if in_chunk {
-        if spec[spec_idx] != chunk_len {
-            return false;
-        }
-        spec_idx += 1;
-    } 
-
-    let response = if spec_idx != spec.len() {
-        false
+    if let Some(result) = memo.get(&key) {
+        *result
     } else {
-        true
-    };
-
-    // let input = &advent_of_code::template::read_file_part("examples", DAY, 2);
-
-    // for line in input.lines() {
-    //     let allowed_spring: Vec<_> = line.chars().map(|c| Spring::try_from(c).unwrap()).collect();
-    //     if springs.eq(&allowed_spring) {
-    //         if response {
-    //             println!("Allowed response: {:?}", springs);
-    //             return true;
-    //         } else {
-    //             println!("Reponse was not allowed but should have been response: {:?}", springs);
-    //             return false;
-    //         }
-    //     }
-    // }
-    // if response {
-    //     println!("Reponse was allowed but should not have been response: {:?}", springs);
-    // }
-    response
+        let computed = get_count(springs, spec, memo);
+        memo.insert(key, computed);
+        computed
+    }
 }
 
-pub fn part_two(input: &str) -> Option<u32> {
+
+fn get_count(springs: &[Spring], spec: &[u8], memo: &mut HashMap<CacheKey, u64>) -> u64 {
+    // If there are no springs left, then its valid iff there are no more chunks
+    if springs.len() == 0 {
+        if spec.len() == 0 {
+            return 1;
+        }
+        return 0;
+    }
+
+    // If there are no chunks of broken springs left, it's valid iff there are no broken springs
+    if spec.len() == 0 {
+        if springs.iter().any(|s| matches!(s, Spring::Broken)) {
+            return 0;
+        }
+        return 1;
+    }
+
+    // Check if there is enough room for the required remaining broken springs
+    // + the springs that must separate them
+    if springs.len() < spec.iter().sum::<u8>() as usize + spec.len() - 1 {
+        return 0;
+    }
+
+    return match springs[0] {
+        Spring::Working => {
+            // this spring is working, just evaluate on the rest
+            memoize(&springs[1..], spec, memo)
+        },
+        Spring::Broken => {
+            // this spring is broken, check if it can fit the next chunk in the best case
+            let chunk_size = spec[0] as usize;
+            // if there are any working springs, this can't work
+            if springs[..chunk_size].iter().any(|s| matches!(s, Spring::Working)) {
+                return 0;
+            }
+
+            // if the spring at the end of the chunk does not work, this can't work
+            if matches!(springs.get(chunk_size).unwrap_or(&Spring::Working), Spring::Broken) {
+                return 0;
+            }
+
+            memoize(&springs[cmp::min(springs.len(), chunk_size + 1)..], &spec[1..], memo)
+        },
+        Spring::Unknown => {
+            memoize(&[&[Spring::Broken][..], &springs[1..]].concat(), spec, memo) + 
+            memoize(&[&[Spring::Working][..], &springs[1..]].concat(), spec, memo)
+        },
+    };
+}
+
+pub fn part_two(input: &str) -> Option<u64> {
     let mut sum = 0;
     for line in input.lines() {
         let (chars, spec_str) = line.split_once(' ').unwrap();
         let joined = vec![chars; 5].join("?");
-        let mut springs: Vec<_> = joined.chars().map(|c| Spring::try_from(c).unwrap()).collect();
+        let springs: Vec<_> = joined.chars().map(|c| Spring::try_from(c).unwrap()).collect();
         let joined_spec = vec![spec_str; 5].join(",");
         let spec: Vec<_> = joined_spec.split(',').map(|d| d.parse::<u8>().unwrap()).collect();
 
-        let line_count = get_count(&mut springs, &spec, 0);
-        println!("{}", line_count);
+        let line_count = get_count(&springs, &spec, &mut HashMap::new());
         sum += line_count;
         
     }
@@ -156,18 +145,6 @@ mod tests {
     fn test_part_one() {
         let result = part_one(&advent_of_code::template::read_file("examples", DAY));
         assert_eq!(result, Some(21));
-    }
-
-    #[test]
-    fn test_match() {
-        let input = &advent_of_code::template::read_file_part("examples", DAY, 2);
-        let spec = vec![3,2,1];
-        for line in input.lines() {
-            let springs: Vec<_> = line.chars().map(|c| Spring::try_from(c).unwrap()).collect();
-            println!("{:?}", springs);
-            assert_eq!(true, check_spec(&springs, &spec))
-
-        }
     }
 
     #[test]
